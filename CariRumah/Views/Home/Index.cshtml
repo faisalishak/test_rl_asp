@@ -1,0 +1,163 @@
+﻿@{
+    ViewBag.Title = "Point of Interest";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<div class="col-lg-12 col-md-12">
+    <div class="card">
+        <div class="header" id="header">
+            Setiap pin dapat diklik untuk mendapatkan detail informasi dan mendapatkan rute dari lokasi anda sekarang ke rumah yang dituju
+        </div>
+        <div class="content">
+            <div id="map" style="height: 554px; width:100%;"></div>
+        </div>
+    </div>
+</div>
+
+<script src="../../Content/js/jquery.min.js" type="text/javascript"></script>
+<script src="https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/markerclusterer.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB--m_ndjyEvbE_ELOcvc0jSGVzLRN0fzg&libraries=places" type="text/javascript" async defer></script>
+<script>
+
+    function initMap() {
+        $('#header').empty(``);
+        $('#header').append(`Setiap pin dapat diklik untuk mendapatkan detail informasi dan mendapatkan rute dari lokasi anda sekarang ke rumah yang dituju`); 
+        $.ajax({
+            type: 'get',
+            url: '/api/showpoint',
+            success: function (data) {
+                var results = data.results;
+
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(function (position) {
+
+                        var map = new google.maps.Map(document.getElementById('map'), {
+                            zoom: 7,
+                            center: new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
+                            mapTypeId: google.maps.MapTypeId.ROADMAP
+                        });
+                        var markerCluster = new MarkerClusterer(map, marker, { imagePath: 'https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m' });
+                        var infowindow = new google.maps.InfoWindow();
+                        var marker;
+                        var i = 0;
+
+                        results.forEach(function (item) {
+                            marker = new google.maps.Marker({
+                                position: new google.maps.LatLng(item.latitude, item.longitude),
+                                map: map
+                            });
+
+                            markerCluster.addMarker(marker);
+                            google.maps.event.addListener(marker, 'click', (function (marker, i) {
+                                return function () {
+                                    $("#myModal").modal();
+
+                                    $('#id').replaceWith('<div id="produkutama" >' + item.id + '</div>');
+                                    $('#tipe').replaceWith('<div id="skala" >' + item.tipe + '</div>');
+                                    $('#alamat').replaceWith('<div id="alamat" >' + item.alamat + '</div> ');
+                                    $('#lat').replaceWith('<div id="lat" >' + item.latitude + '</div> ');
+                                    $('#lon').replaceWith('<div id="lon" >' + item.longitude + '</div> ');
+                                    $('#petunjuk-arah').replaceWith('<button id="petunjuk-arah" type="button" class="btn btn-default btn-sm" data-dismiss="modal" onclick="petunjukArah(' + item.latitude + ', ' + item.longitude + ');">Mulai</button>');
+
+                                    $.ajax({
+                                        type: 'get',
+                                        url: '/api/jarak',
+                                        data: {
+                                            lat1: position.coords.latitude,
+                                            lon1: position.coords.longitude,
+                                            lat2: item.latitude,
+                                            lon2: item.longitude
+                                        },
+                                        success: function (data) {
+                                            var result = data.result;
+                                            $('#jarak').replaceWith('<div id="jarak" class="">' + result + ' Km</div> ');
+                                        },
+                                    });
+
+                                }
+                            })(marker, i));
+                            i++;
+                        });
+
+                    }, function () {
+                        handleLocationError(true, infoWindow, map.getCenter());
+                    });
+                } else {
+
+                    // Browser doesn't support Geolocation
+                    navigator.geolocation.getCurrentPosition(function (position) {
+
+                        var map = new google.maps.Map(document.getElementById('map'), {
+                            zoom: 17,
+                            center: new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
+                            mapTypeId: google.maps.MapTypeId.ROADMAP
+                        });
+
+                        var infowindow = new google.maps.InfoWindow();
+                        var marker;
+                        var i = 0;
+
+                        results.forEach(function (item) {
+                            marker = new google.maps.Marker({
+                                position: new google.maps.LatLng(item.latitude, item.longitude),
+                                map: map
+                            });
+
+                            google.maps.event.addListener(marker, 'click', (function (marker, i) {
+                                return function () {
+                                    infowindow.setContent(item.nama_usaha);
+                                    infowindow.open(map, marker);
+                                }
+                            })(marker, i));
+
+                            i++;
+                        });
+
+                    }, function () {
+                        handleLocationError(true, infoWindow, map.getCenter());
+                    });
+                }
+            },
+        });
+    }
+
+    initMap();
+
+    function petunjukArah(lat, lon) {
+        var directionsService = new google.maps.DirectionsService;
+        var directionsDisplay = new google.maps.DirectionsRenderer;
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function (position) {
+                var map = new google.maps.Map(document.getElementById('map'), {
+                    zoom: 17,
+                    center: new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
+                    mapTypeId: google.maps.MapTypeId.ROADMAP
+                });
+
+                directionsDisplay.setMap(map);
+                calculateAndDisplayRoute(directionsService, directionsDisplay, lat, lon);
+            });
+        }
+    }
+
+    function calculateAndDisplayRoute(directionsService, directionsDisplay, lat, lon) {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function (position) {
+                directionsService.route({
+                    origin: new google.maps.LatLng(position.coords.latitude, position.coords.longitude),
+                    destination: new google.maps.LatLng(lat, lon),
+                    travelMode: 'DRIVING'
+                }, function (response, status) {
+                    if (status === 'OK') {
+                        directionsDisplay.setDirections(response);
+                    } else {
+                        window.alert('Directions request failed due to ' + status);
+                    }
+                });
+            });
+            $('#header').empty(``);
+            $('#header').append(`<button type="button" class="btn btn-default btn-sm" data-dismiss="modal" onclick="initMap();">< Back</button> <br> Berikut adalah Rute dari lokasi anda sekarang`);
+        }
+    }
+
+</script>

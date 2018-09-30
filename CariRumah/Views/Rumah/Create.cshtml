@@ -1,0 +1,165 @@
+﻿@{
+    ViewBag.Title = "Tambah Data Rumah";
+    Layout = "~/Views/Shared/_LayoutAdmin.cshtml";
+}
+
+<style>
+    #map {
+        height: 50%;
+    }
+</style>
+
+<div class="col-lg-12 col-md-12">
+    <div class="card">
+        <div class="header">
+        </div>
+        <div class="content">
+            <form action="/Rumah/Create" method="post">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>ID</label>
+                            <input name="id" type="text" class="form-control border-input" placeholder="ID" value="" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Tipe Rumah</label>
+                            <select name="tipe" class="form-control border-input" required>
+                                <option value="">---- Pilih tipe rumah ----</option>
+                                <option value="36">36</option>
+                                <option value="45">45</option>
+                                <option value="72">72</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Alamat</label>
+                            <input name="alamat" id="pac-input" type="text" class="form-control border-input" placeholder="ex : JL. Cempaka VI..." required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Latitude</label>
+                            <input name="latitude" id="latitude" type="text" class="form-control border-input" placeholder="" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Longitude</label>
+                            <input name="longitude" id="longitude" type="text" class="form-control border-input" placeholder="" required>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div id="map" style="height: 354px; width:100%; margin-top:25px;"></div>
+                        <div id="infowindow-content">
+                            <img src="" width="16" height="16" id="place-icon">
+                            <span id="place-name" class="title"></span><br>
+                            <span id="place-address"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <br>
+                <div class="text-center">
+                    <button type="submit" class="btn btn-info btn-fill btn-wd">Tambah</button>
+                </div>
+                <div class="clearfix"></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="../../Content/js/jquery.min.js" type="text/javascript"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD1RZRnMoBCZOkFAUcxWTJqIsUZ8kMHDAA&libraries=places&callback=initMap" type="text/javascript" async defer></script>
+<!--<script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false&libraries=places"></script>-->
+<script>
+    // This example requires the Places library. Include the libraries=places
+    // parameter when you first load the API. For example:
+    // <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD1RZRnMoBCZOkFAUcxWTJqIsUZ8kMHDAA&libraries=places">
+
+    function initMap() {
+
+        var map = new google.maps.Map(document.getElementById('map'), {
+            center: { lat: -6.896984, lng: 107.622751 },
+            zoom: 17
+        });
+
+        var input = document.getElementById('pac-input');
+
+        var autocomplete = new google.maps.places.Autocomplete(input);
+
+        autocomplete.bindTo('bounds', map);
+
+        // Set the data fields to return when the user selects a place.
+        autocomplete.setFields(
+            ['address_components', 'geometry', 'icon', 'name']);
+
+        var infowindow = new google.maps.InfoWindow();
+        var infowindowContent = document.getElementById('infowindow-content');
+        infowindow.setContent(infowindowContent);
+        var marker = new google.maps.Marker({
+            map: map,
+            anchorPoint: new google.maps.Point(0, -29)
+        });
+
+        autocomplete.addListener('place_changed', function () {
+            infowindow.close();
+            marker.setVisible(false);
+            var place = autocomplete.getPlace();
+
+            if (!place.geometry) {
+                // User entered the name of a Place that was not suggested and
+                // pressed the Enter key, or the Place Details request failed.
+                window.alert("No details available for input: '" + place.name + "'");
+                return;
+            }
+
+            // If the place has a geometry, then present it on a map.
+            if (place.geometry.viewport) {
+                map.fitBounds(place.geometry.viewport);
+                var lat = place.geometry.location.lat();
+                var lng = place.geometry.location.lng();
+                $("#latitude").val(lat);
+                $("#longitude").val(lng);
+                window.alert("Langitude, Logitude : '" + lat + "', " + lng);
+            } else {
+                map.setCenter(place.geometry.location);
+                map.setZoom(17);  // Why 17? Because it looks good.
+                var lat = place.geometry.location.lat();
+                var lng = place.geometry.location.lng();
+                $("#latitude").val(lat);
+                $("#longitude").val(lng);
+                window.alert("Langitude, Logitude : '" + lat + "', " + lng);
+
+            }
+
+            marker.setPosition(place.geometry.location);
+            marker.setVisible(true);
+
+            var address = '';
+            if (place.address_components) {
+                address = [
+                    (place.address_components[0] && place.address_components[0].short_name || ''),
+                    (place.address_components[1] && place.address_components[1].short_name || ''),
+                    (place.address_components[2] && place.address_components[2].short_name || '')
+                ].join(' ');
+            }
+
+            infowindowContent.children['place-icon'].src = place.icon;
+            infowindowContent.children['place-name'].textContent = place.name;
+            infowindowContent.children['place-address'].textContent = address;
+            infowindow.open(map, marker);
+        });
+
+        // Sets a listener on a radio button to change the filter type on Places
+        // Autocomplete.
+        function setupClickListener(id, types) {
+            var radioButton = document.getElementById(id);
+            radioButton.addEventListener('click', function () {
+                autocomplete.setTypes(types);
+            });
+        }
+
+    }
+
+    //initMap();
+</script>
